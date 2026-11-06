@@ -1,4 +1,5 @@
-# Portainer Git deployment. Supply secrets in Portainer's Environment variables.
+# Portainer Git deployment using NAS folders under /volume1/docker/buzz.
+# Supply secrets in Portainer's Environment variables.
 # Based on deploy/compose/compose.yml; no .env file is required in this repository.
 services:
   relay:
@@ -33,7 +34,11 @@ services:
     ports:
       - "${BUZZ_HTTP_BIND:-127.0.0.1}:${BUZZ_HTTP_PORT:-3030}:3000"
     volumes:
-      - buzz-git-data:/data/git
+      - type: bind
+        source: /volume1/docker/buzz/git
+        target: /data/git
+        bind:
+          create_host_path: false
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,7 +71,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - buzz-postgres-data:/var/lib/postgresql/data
+      - type: bind
+        source: /volume1/docker/buzz/postgres
+        target: /var/lib/postgresql/data
+        bind:
+          create_host_path: false
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -83,7 +92,11 @@ services:
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
     volumes:
-      - buzz-redis-data:/data
+      - type: bind
+        source: /volume1/docker/buzz/redis
+        target: /data
+        bind:
+          create_host_path: false
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
       interval: 5s
@@ -102,7 +115,11 @@ services:
       MINIO_ROOT_USER: ${BUZZ_S3_ACCESS_KEY:?set BUZZ_S3_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${BUZZ_S3_SECRET_KEY:?set BUZZ_S3_SECRET_KEY}
     volumes:
-      - buzz-minio-data:/data
+      - type: bind
+        source: /volume1/docker/buzz/minio
+        target: /data
+        bind:
+          create_host_path: false
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:9000/minio/health/live"]
       interval: 5s
@@ -131,20 +148,6 @@ services:
     restart: "no"
     networks:
       - buzz-net
-
-volumes:
-  buzz-postgres-data:
-    labels:
-      com.buzz.volume: postgres
-  buzz-redis-data:
-    labels:
-      com.buzz.volume: redis
-  buzz-minio-data:
-    labels:
-      com.buzz.volume: minio
-  buzz-git-data:
-    labels:
-      com.buzz.volume: git
 
 networks:
   buzz-net:
